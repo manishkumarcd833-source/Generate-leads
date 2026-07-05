@@ -1,38 +1,197 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Soma's Agency — Widget Test Page</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; background: #EFECE4; color: #1B2430; }
-    .wrap { max-width: 640px; margin: 60px auto; padding: 0 20px; }
-    h1 { font-size: 22px; }
-    p { line-height: 1.6; color: #4A5560; }
-    code { background: #E9E3D5; padding: 2px 6px; border-radius: 4px; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Soma's Agency — Find your next address</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --ink:#1B2430; --ink-soft:#2E3A47; --paper:#FAF8F2; --paper-dim:#F0ECE1;
+    --slate:#66727C; --brass:#B08A4E; --brass-light:#D9BD8A; --line:#E2DDD1;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'IBM Plex Sans',sans-serif; -webkit-font-smoothing:antialiased;}
+  a{color:inherit;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:2px; color:var(--brass); text-transform:uppercase;}
+  h1,h2,h3{font-family:'Fraunces',serif; margin:0; font-weight:600;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+
+  nav{position:sticky; top:0; z-index:50; background:var(--ink); color:var(--paper); padding:16px 0; border-bottom:1px solid rgba(217,189,138,0.25);}
+  nav .row{display:flex; align-items:center; justify-content:space-between;}
+  nav .brand{font-family:'Fraunces',serif; font-weight:600; font-size:19px;}
+  nav .links{display:none; gap:28px; font-size:13.5px; color:#C7CDD4;}
+  @media(min-width:720px){ nav .links{display:flex;} }
+  nav .cta{background:var(--brass); color:var(--ink); border:none; padding:9px 18px; border-radius:6px; font-weight:600; font-size:13px; cursor:pointer; font-family:inherit;}
+
+  .hero{
+    background:
+      linear-gradient(180deg, var(--ink) 0%, var(--ink) 100%),
+      repeating-linear-gradient(0deg, rgba(217,189,138,0.06) 0 1px, transparent 1px 48px),
+      repeating-linear-gradient(90deg, rgba(217,189,138,0.06) 0 1px, transparent 1px 48px);
+    color:var(--paper); padding:76px 0 88px; position:relative; overflow:hidden;
+  }
+  .hero h1{font-size:clamp(32px,5.2vw,54px); line-height:1.08; max-width:680px; letter-spacing:-0.5px;}
+  .hero p{color:#B7BEC7; font-size:16px; max-width:480px; line-height:1.6; margin-top:18px;}
+  .hero .actions{display:flex; gap:14px; margin-top:32px; flex-wrap:wrap;}
+  .btn-primary{background:var(--brass); color:var(--ink); border:none; padding:13px 24px; border-radius:8px; font-weight:600; font-size:14.5px; cursor:pointer; font-family:inherit;}
+  .btn-ghost{background:transparent; color:var(--paper); border:1px solid rgba(250,248,242,0.3); padding:13px 24px; border-radius:8px; font-weight:500; font-size:14.5px; cursor:pointer; font-family:inherit;}
+
+  .section{padding:64px 0;}
+  .section-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:36px; flex-wrap:wrap;}
+  .section-head h2{font-size:28px;}
+
+  .grid{display:grid; grid-template-columns:1fr; gap:20px;}
+  @media(min-width:720px){ .grid{grid-template-columns:repeat(3,1fr);} }
+  .card{background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+  .card .art{height:150px; background:linear-gradient(135deg,var(--ink-soft),var(--ink)); display:flex; align-items:center; justify-content:center; position:relative;}
+  .card .art svg{width:56px; height:56px; opacity:0.85;}
+  .card .tag{position:absolute; top:10px; left:10px; background:rgba(250,248,242,0.9); color:var(--ink); font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; padding:3px 8px; border-radius:4px;}
+  .card .body{padding:16px 18px 18px;}
+  .card .price{font-family:'Fraunces',serif; font-weight:600; font-size:20px;}
+  .card .addr{color:var(--slate); font-size:13px; margin-top:2px;}
+  .spec-row{display:flex; align-items:baseline; margin-top:10px; font-size:12.5px;}
+  .spec-row .label{color:var(--slate); font-family:'IBM Plex Mono',monospace; flex-shrink:0;}
+  .spec-row .leader{flex:1; border-bottom:1.5px dotted #C9C2AF; margin:0 8px; transform:translateY(-4px);}
+  .spec-row .val{flex-shrink:0; font-weight:500;}
+  .placeholder-note{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--slate); text-align:center; margin-top:18px;}
+
+  .props{display:grid; grid-template-columns:1fr; gap:28px;}
+  @media(min-width:720px){ .props{grid-template-columns:repeat(3,1fr);} }
+  .prop h3{font-size:17px; margin-bottom:8px;}
+  .prop p{color:var(--slate); font-size:14px; line-height:1.6; margin:0;}
+  .prop .rule{width:28px; height:2px; background:var(--brass); margin-bottom:14px;}
+
+  .banner{background:var(--ink); color:var(--paper); border-radius:14px; padding:40px 32px; display:flex; flex-direction:column; gap:16px; align-items:flex-start;}
+  @media(min-width:720px){ .banner{flex-direction:row; align-items:center; justify-content:space-between;} }
+  .banner h3{font-size:22px; max-width:420px; line-height:1.3;}
+  .banner p{color:#B7BEC7; font-size:14px; margin:8px 0 0; max-width:420px;}
+
+  footer{border-top:1px solid var(--line); padding:32px 0; color:var(--slate); font-size:13px;}
+  footer .row{display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>This is your website (placeholder)</h1>
-    <p>
-      The chat bubble in the bottom-right corner is the real widget, loaded exactly the way it
-      would be on your live site. Click it and try a full conversation.
-    </p>
-    <p>
-      Before this will work, edit the <code>backendUrl</code> below to point at your deployed
-      backend (e.g. the Render or Railway URL you get after deploying
-      <code>somas-agency-backend</code>).
-    </p>
-  </div>
 
-  <script>
-    window.SomaChatConfig = {
-      backendUrl: "https://manishkumarcd833-source.github.io/Generate-leads/demo.html", // <-- change to your deployed backend URL
-      agencyName: "Soma's Agency",
-      agentName: "Maya",
-    };
-  </script>
-  <script src="./soma-chat-widget.js"></script>
+<nav>
+  <div class="wrap row">
+    <div class="brand">Soma's Agency</div>
+    <div class="links">
+      <a href="#listings">Listings</a>
+      <a href="#why">Why us</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <button class="cta" onclick="document.getElementById('soma-widget-bubble')?.click()">Chat with Maya</button>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Buying · Renting · Local expertise</div>
+    <h1>Your next address,<br/>mapped with care.</h1>
+    <p>Tell us what you're looking for and we'll match you with the right place — and the right person to help you get there.</p>
+    <div class="actions">
+      <button class="btn-primary" onclick="document.getElementById('soma-widget-bubble')?.click()">Get my free Market Snapshot</button>
+      <a href="#listings"><button class="btn-ghost">See listings</button></a>
+    </div>
+  </div>
+</header>
+
+<section class="section" id="listings">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <div class="eyebrow">Featured</div>
+        <h2>A few places worth a look</h2>
+      </div>
+    </div>
+    <div class="grid">
+
+      <div class="card">
+        <div class="art">
+          <span class="tag">FOR SALE</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#D9BD8A" stroke-width="1.4"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9h14v-9"/><path d="M9.5 19v-5h5v5"/></svg>
+        </div>
+        <div class="body">
+          <div class="price">$485,000</div>
+          <div class="addr">Maple Grove · 3 bed condo</div>
+          <div class="spec-row"><span class="label">Beds</span><span class="leader"></span><span class="val">3</span></div>
+          <div class="spec-row"><span class="label">Baths</span><span class="leader"></span><span class="val">2</span></div>
+          <div class="spec-row"><span class="label">Sqft</span><span class="leader"></span><span class="val">1,420</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="art">
+          <span class="tag">FOR SALE</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#D9BD8A" stroke-width="1.4"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9h14v-9"/><path d="M9.5 19v-5h5v5"/></svg>
+        </div>
+        <div class="body">
+          <div class="price">$612,000</div>
+          <div class="addr">Riverside · 4 bed house</div>
+          <div class="spec-row"><span class="label">Beds</span><span class="leader"></span><span class="val">4</span></div>
+          <div class="spec-row"><span class="label">Baths</span><span class="leader"></span><span class="val">3</span></div>
+          <div class="spec-row"><span class="label">Sqft</span><span class="leader"></span><span class="val">2,050</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="art">
+          <span class="tag">FOR RENT</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#D9BD8A" stroke-width="1.4"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9h14v-9"/><path d="M9.5 19v-5h5v5"/></svg>
+        </div>
+        <div class="body">
+          <div class="price">$2,150/mo</div>
+          <div class="addr">Downtown · 2 bed apartment</div>
+          <div class="spec-row"><span class="label">Beds</span><span class="leader"></span><span class="val">2</span></div>
+          <div class="spec-row"><span class="label">Baths</span><span class="leader"></span><span class="val">1</span></div>
+          <div class="spec-row"><span class="label">Sqft</span><span class="leader"></span><span class="val">960</span></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="placeholder-note">These 3 are placeholder listings — swap in your real properties and photos here.</div>
+  </div>
+</section>
+
+<section class="section" id="why">
+  <div class="wrap">
+    <div class="section-head"><div><div class="eyebrow">Why Soma's Agency</div><h2>What you get working with us</h2></div></div>
+    <div class="props">
+      <div class="prop"><div class="rule"></div><h3>Someone who answers</h3><p>Chat with Maya any time of day — she'll answer real questions and loop in a human the moment you need one.</p></div>
+      <div class="prop"><div class="rule"></div><h3>Local, honest numbers</h3><p>No inflated estimates. We'll tell you what a place is actually worth and why.</p></div>
+      <div class="prop"><div class="rule"></div><h3>No pressure, ever</h3><p>Take the time you need. We're here when you're ready, not before.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="contact">
+  <div class="wrap">
+    <div class="banner">
+      <div>
+        <h3>Not sure where to start? Get a free Neighborhood Market Snapshot.</h3>
+        <p>Recent sale prices, days-on-market, and price trends for any area you're eyeing — just tell Maya.</p>
+      </div>
+      <button class="btn-primary" onclick="document.getElementById('soma-widget-bubble')?.click()">Start the chat</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap row">
+    <div>© Soma's Agency</div>
+    <div>Realestate@somasagency.com · +91 8904161393</div>
+  </div>
+</footer>
+
+<script>
+  window.SomaChatConfig = {
+    backendUrl: "https://generate-leads.onrender.com/",
+    agencyName: "Soma's Agency",
+    agentName: "Maya",
+  };
+</script>
+<script src="./soma-chat-widget.js"></script>
 </body>
 </html>
