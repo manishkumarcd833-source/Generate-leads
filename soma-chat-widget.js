@@ -2,7 +2,6 @@
  * Soma's Agency — Website Chat Widget
  * ------------------------------------
  * Drop this on any page with:
- *
  *   <script>
  *     window.SomaChatConfig = { backendUrl: "https://your-backend-url.onrender.com" };
  *   </script>
