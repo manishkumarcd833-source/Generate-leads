@@ -209,6 +209,16 @@
       const wasQualified = qualified;
       qualified = !!parsed.qualified;
 
+      // Persist the lead as soon as we know their email, so the backend can
+      // follow up later if they go quiet. Harmless to call repeatedly — it upserts.
+      if (fields.email) {
+        fetch(`${CONFIG.backendUrl}/api/save-lead`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fields, qualified }),
+        }).catch(() => {});
+      }
+
       // Fire the snapshot email the moment we newly learn the visitor's email.
       if (!hadEmail && fields.email && !snapshotSent) {
         snapshotSent = true;
@@ -238,3 +248,4 @@
 
   render();
 })();
+            
