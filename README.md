@@ -1,4 +1,4 @@
-# Soma's Agency — Chatbot Backend
+# Soma's Agency — Chatbot Backend 
 
 This is the server your website's chat widget talks to. It keeps your Anthropic API key private, runs the lead-qualification logic, and sends emails for the market-snapshot magnet and new-lead alerts.
 
