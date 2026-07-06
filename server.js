@@ -30,7 +30,7 @@ function writeLeads(leads) {
   fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2));
 }
 
-// ---------- lead scoring (Hot / Warm / Cold), LeadSquared-style ------------
+// ---------- lead scoring (Hot / Warm / Cold), LeadSquared-style ----------
 function computeLeadScore(fields = {}) {
   let score = 0;
   if (fields.intent) score += 15;
@@ -52,6 +52,9 @@ function computeLeadScore(fields = {}) {
 
 const AGENCY_NAME = "Soma's Agency";
 const AGENT_NAME = "Maya";
+const OWNER_NAME = process.env.AGENT_OWNER_NAME || "Soma"; // who leads get assigned to by default
+const BASE_URL = process.env.BASE_URL || ""; // your Render URL, e.g. https://generate-leads.onrender.com — used to build clickable stage-update links in emails
+const ADMIN_SECRET = process.env.ADMIN_SECRET || process.env.FOLLOWUP_SECRET; // reuses your existing secret if ADMIN_SECRET isn't set separately
 const LEAD_MAGNET =
   "a free Neighborhood Market Snapshot (recent sale prices, days-on-market, and price trends for any area they're eyeing)";
 
@@ -95,6 +98,7 @@ Your job in every reply:
    name, phone, email, intent ("buy" or "rent"), propertyType (e.g. condo/house/townhome), location (neighborhood/city), budgetMin, budgetMax, bedrooms, timeline (when they want to move/close), financing ("pre-approved"/"cash"/"needs financing"/"unsure").
 6. Use ${LEAD_MAGNET} as your main hook for getting contact details. Once the visitor has mentioned an area of interest but you don't yet have their email, offer to send them this snapshot for that area and ask for their email to send it to. Don't offer it more than once, and don't dangle it if they've already given their email — just confirm you'll send it. This is a real incentive, not a gimmick, so treat it naturally, not pushy.
 7. Keep replies warm, sharp, and short — 1 to 3 sentences. No corporate filler.
+8. When you answer a genuine property-related question (buying process, home loans, renting, neighborhoods, etc.), end with a brief, natural mention of 2 to 4 closely related questions the visitor might want to ask next — phrased as a casual conversational offer in one added sentence (e.g., "Want me to also cover registration costs, or how loan eligibility works?"), never as a bulleted list or a separate section. Skip this when their message was just qualifying info (like sharing their budget) rather than an actual question, and skip it if you just asked them something yourself — don't stack two questions on them.
 
 ${REFERENCE_KNOWLEDGE}
 
@@ -105,6 +109,18 @@ Format exactly:
 Rules for "fields": only set a value if the visitor has stated it at some point in the conversation (this turn or earlier turns you can see in the history). Leave it as "" if still unknown. Never guess or fabricate a value. Once you learn something, keep restating it in every subsequent turn's fields so it isn't lost.
 Set "qualified": true once you know intent, at least one budget figure, and timeline. Otherwise false.
 Set "magnetOffered": true starting from the turn where you first offer the Neighborhood Market Snapshot, and keep it true in every turn after that. Otherwise false.`;
+
+// ---------- pipeline stage helpers ----------
+const STAGES = ["New", "Contacted", "Qualified", "Converted", "Lost"];
+
+function stageActionLinks(email) {
+  if (!BASE_URL || !ADMIN_SECRET) {
+    return "(Set BASE_URL and ADMIN_SECRET in your environment variables to get clickable stage-update links here.)";
+  }
+  const make = (stage) =>
+    `Mark ${stage}: ${BASE_URL}/api/update-stage?email=${encodeURIComponent(email)}&stage=${stage}&key=${ADMIN_SECRET}`;
+  return ["Contacted", "Qualified", "Converted", "Lost"].map(make).join("\n");
+}
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -208,6 +224,8 @@ app.post("/api/save-lead", (req, res) => {
       score,
       label,
       qualified: qualified || existing?.qualified || false,
+      stage: existing?.stage || "New",
+      assignedTo: existing?.assignedTo || OWNER_NAME,
       createdAt: existing?.createdAt || new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
       followUpCount: existing?.followUpCount || 0,
@@ -274,28 +292,129 @@ If you're still looking, happy to help — just reply to this email or hop back 
   }
 });
 
-// Notifies the agency inbox once a lead is captured/qualified.
+// One-tap pipeline stage update — the links in your emails point here.
+// GET so they work as plain clickable links (no app needed to trigger them).
+app.get("/api/update-stage", (req, res) => {
+  if (!ADMIN_SECRET || req.query.key !== ADMIN_SECRET) {
+    return res.status(401).send("Unauthorized");
+  }
+  const { email, stage } = req.query;
+  if (!email || !STAGES.includes(stage)) {
+    return res.status(400).send("Invalid request — check the email and stage in this link.");
+  }
+  const leads = readLeads();
+  const key = email.trim().toLowerCase();
+  if (!leads[key]) return res.status(404).send("Lead not found.");
+
+  const now = new Date().toISOString();
+  leads[key].stage = stage;
+  if (stage === "Contacted" && !leads[key].contactedAt) leads[key].contactedAt = now;
+  if (stage === "Qualified" && !leads[key].qualifiedAt) leads[key].qualifiedAt = now;
+  if (stage === "Converted") {
+    leads[key].convertedAt = now;
+    leads[key].qualified = true;
+  }
+  if (stage === "Lost") leads[key].lostAt = now;
+  writeLeads(leads);
+
+  res.send(
+    `<html><body style="font-family:sans-serif;padding:40px;text-align:center;">
+      <h2>Marked ${email} as ${stage} ✓</h2>
+      <p>You can close this tab.</p>
+    </body></html>`
+  );
+});
+
+// Sends a lead-pipeline digest: stage counts, conversion rate, average time-to-first-contact,
+// and your top open leads by score, each with one-tap links to update their stage.
+// Trigger this on a schedule (daily or weekly) the same way as /api/run-followups.
+app.get("/api/send-digest", async (req, res) => {
+  if (!ADMIN_SECRET || req.query.key !== ADMIN_SECRET) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+  try {
+    const leads = readLeads();
+    const all = Object.entries(leads);
+    const total = all.length;
+
+    const counts = { New: 0, Contacted: 0, Qualified: 0, Converted: 0, Lost: 0 };
+    all.forEach(([, l]) => {
+      const s = l.stage || "New";
+      counts[s] = (counts[s] || 0) + 1;
+    });
+
+    const conversionRate = total ? ((counts.Converted / total) * 100).toFixed(1) : "0.0";
+
+    const responseTimes = all
+      .filter(([, l]) => l.contactedAt && l.createdAt)
+      .map(([, l]) => (new Date(l.contactedAt) - new Date(l.createdAt)) / (1000 * 60 * 60));
+    const avgResponseHours = responseTimes.length
+      ? (responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length).toFixed(1)
+      : null;
+
+    const openLeads = all
+      .filter(([, l]) => l.stage !== "Converted" && l.stage !== "Lost")
+      .sort((a, b) => (b[1].score || 0) - (a[1].score || 0))
+      .slice(0, 5);
+
+    const openLeadsText = openLeads
+      .map(([email, l]) => {
+        const f = l.fields || {};
+        return `${f.name || email} — ${l.label || "Cold"} (${l.score || 0}/100), stage: ${l.stage || "New"}
+  Wants to ${f.intent || "?"} in ${f.location || "?"}, assigned to ${l.assignedTo || OWNER_NAME}
+  ${stageActionLinks(email)}`;
+      })
+      .join("\n\n");
+
+    await transporter.sendMail({
+      from: process.env.FROM_EMAIL,
+      to: process.env.AGENCY_NOTIFY_EMAIL,
+      subject: `${AGENCY_NAME} — Lead pipeline digest (${total} total)`,
+      text: `Pipeline snapshot:
+New: ${counts.New}  |  Contacted: ${counts.Contacted}  |  Qualified: ${counts.Qualified}  |  Converted: ${counts.Converted}  |  Lost: ${counts.Lost}
+
+Conversion rate: ${conversionRate}%
+${avgResponseHours ? `Average time to first contact: ${avgResponseHours} hours` : "Average time to first contact: not enough data yet"}
+
+Your top open leads right now:
+
+${openLeadsText || "(no open leads right now)"}
+
+— ${AGENCY_NAME} chat assistant`,
+    });
+
+    res.json({ ok: true, total, counts, conversionRate });
+  } catch (err) {
+    console.error("send-digest error:", err);
+    res.status(500).json({ error: "Could not send digest." });
+  }
+});
 // Body: { fields: {...}, transcript: [{ role, content }, ...] }
 app.post("/api/lead", async (req, res) => {
   try {
     const { fields = {}, transcript = [] } = req.body;
     const { score, label } = computeLeadScore(fields);
 
-    // Mark this lead as converted in storage so follow-ups stop targeting them.
+    // Mark this lead as qualified in storage so follow-ups stop targeting them,
+    // and advance its pipeline stage (unless it's already further along, e.g. Converted/Lost).
     if (fields.email) {
       const key = fields.email.trim().toLowerCase();
       const leads = readLeads();
+      const existing = leads[key];
+      const alreadyPastQualified = existing && ["Converted", "Lost"].includes(existing.stage);
       leads[key] = {
-        ...(leads[key] || {}),
+        ...(existing || {}),
         fields,
         score,
         label,
         qualified: true,
-        convertedAt: new Date().toISOString(),
+        stage: alreadyPastQualified ? existing.stage : "Qualified",
+        qualifiedAt: existing?.qualifiedAt || new Date().toISOString(),
+        assignedTo: existing?.assignedTo || OWNER_NAME,
         lastActiveAt: new Date().toISOString(),
-        createdAt: leads[key]?.createdAt || new Date().toISOString(),
-        followUpCount: leads[key]?.followUpCount || 0,
-        lastFollowUpAt: leads[key]?.lastFollowUpAt || null,
+        createdAt: existing?.createdAt || new Date().toISOString(),
+        followUpCount: existing?.followUpCount || 0,
+        lastFollowUpAt: existing?.lastFollowUpAt || null,
       };
       writeLeads(leads);
     }
@@ -314,8 +433,12 @@ app.post("/api/lead", async (req, res) => {
       text: `A new lead came through the ${AGENCY_NAME} chat assistant:
 
 Lead score: ${score}/100 (${label})
+Assigned to: ${OWNER_NAME}
 
 ${summary || "(no fields captured yet)"}
+
+Update this lead's stage:
+${fields.email ? stageActionLinks(fields.email) : "(no email captured yet, so no direct links available)"}
 
 ---
 Full conversation:
