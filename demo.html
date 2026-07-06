@@ -18,6 +18,7 @@
   h1,h2,h3{font-family:'Fraunces',serif; margin:0; font-weight:600;}
   .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
 
+  /* NAV */
   nav{position:sticky; top:0; z-index:50; background:var(--ink); color:var(--paper); padding:16px 0; border-bottom:1px solid rgba(217,189,138,0.25);}
   nav .row{display:flex; align-items:center; justify-content:space-between;}
   nav .brand{font-family:'Fraunces',serif; font-weight:600; font-size:19px;}
@@ -25,6 +26,7 @@
   @media(min-width:720px){ nav .links{display:flex;} }
   nav .cta{background:var(--brass); color:var(--ink); border:none; padding:9px 18px; border-radius:6px; font-weight:600; font-size:13px; cursor:pointer; font-family:inherit;}
 
+  /* HERO */
   .hero{
     background:
       linear-gradient(180deg, var(--ink) 0%, var(--ink) 100%),
@@ -38,10 +40,12 @@
   .btn-primary{background:var(--brass); color:var(--ink); border:none; padding:13px 24px; border-radius:8px; font-weight:600; font-size:14.5px; cursor:pointer; font-family:inherit;}
   .btn-ghost{background:transparent; color:var(--paper); border:1px solid rgba(250,248,242,0.3); padding:13px 24px; border-radius:8px; font-weight:500; font-size:14.5px; cursor:pointer; font-family:inherit;}
 
+  /* SECTION HEAD */
   .section{padding:64px 0;}
   .section-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:36px; flex-wrap:wrap;}
   .section-head h2{font-size:28px;}
 
+  /* LISTING CARDS */
   .grid{display:grid; grid-template-columns:1fr; gap:20px;}
   @media(min-width:720px){ .grid{grid-template-columns:repeat(3,1fr);} }
   .card{background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden;}
@@ -57,17 +61,20 @@
   .spec-row .val{flex-shrink:0; font-weight:500;}
   .placeholder-note{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--slate); text-align:center; margin-top:18px;}
 
+  /* VALUE PROPS */
   .props{display:grid; grid-template-columns:1fr; gap:28px;}
   @media(min-width:720px){ .props{grid-template-columns:repeat(3,1fr);} }
   .prop h3{font-size:17px; margin-bottom:8px;}
   .prop p{color:var(--slate); font-size:14px; line-height:1.6; margin:0;}
   .prop .rule{width:28px; height:2px; background:var(--brass); margin-bottom:14px;}
 
+  /* SNAPSHOT BANNER */
   .banner{background:var(--ink); color:var(--paper); border-radius:14px; padding:40px 32px; display:flex; flex-direction:column; gap:16px; align-items:flex-start;}
   @media(min-width:720px){ .banner{flex-direction:row; align-items:center; justify-content:space-between;} }
   .banner h3{font-size:22px; max-width:420px; line-height:1.3;}
   .banner p{color:#B7BEC7; font-size:14px; margin:8px 0 0; max-width:420px;}
 
+  /* FOOTER */
   footer{border-top:1px solid var(--line); padding:32px 0; color:var(--slate); font-size:13px;}
   footer .row{display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;}
 </style>
@@ -181,13 +188,13 @@
 <footer>
   <div class="wrap row">
     <div>© Soma's Agency</div>
-    <div>Realestate@somasagency.com · +91 8904161393</div>
+    <div>hello@somasagency.com · (555) 010-0199</div>
   </div>
 </footer>
 
 <script>
   window.SomaChatConfig = {
-    backendUrl: "https://generate-leads.onrender.com/",
+    backendUrl: "http://localhost:3001", // <-- change to your deployed Render backend URL
     agencyName: "Soma's Agency",
     agentName: "Maya",
   };
