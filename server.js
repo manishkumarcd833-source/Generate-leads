@@ -30,7 +30,7 @@ function writeLeads(leads) {
   fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2));
 }
 
-// ---------- lead scoring (Hot / Warm / Cold), LeadSquared-style ----------
+// ---------- lead scoring (Hot / Warm / Cold), LeadSquared-style ------------
 function computeLeadScore(fields = {}) {
   let score = 0;
   if (fields.intent) score += 15;
